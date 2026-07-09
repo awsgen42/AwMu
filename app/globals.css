@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ===== AwMu Animations ===== */
+
+/* Splash */
+@keyframes splashPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.splash-pop { animation: splashPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes splashFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.splash-fade { animation: splashFade 0.4s ease 0.25s both; }
+
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+.dot-bounce { animation: dotBounce 1.2s ease-in-out infinite; }
+
+/* Message bubble entry — WhatsApp style */
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.msg-in { animation: msgIn 0.22s ease-out both; }
+
+/* Screen slide-in */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.screen-slide { animation: slideIn 0.25s ease-out both; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.3s ease-out both; }
+
+/* Reaction bar pop */
+@keyframes reactPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.06); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.react-pop { animation: reactPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Send button pulse */
+@keyframes sendTap {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+.send-tap:active { animation: sendTap 0.18s ease; }
+
+/* ===== AwMu Smooth Motion v2 ===== */
+
+:root {
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Har interactive cheez pe halki smooth transition */
+button, a, input, textarea {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+    opacity 0.18s ease, transform 0.18s var(--ease-spring), box-shadow 0.18s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+/* Chat kholne ki animation — poora screen smooth slide (WhatsApp feel) */
+@keyframes chatOpen {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.chat-open { animation: chatOpen 0.32s var(--ease-out) both; }
+
+/* Page fade-up — behtar curve */
+.fade-up { animation: fadeUp 0.35s var(--ease-out) both; }
+
+/* Message bubbles — spring pop */
+@keyframes msgInSmooth {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.msg-in { animation: msgInSmooth 0.3s var(--ease-spring) both; }
+
+/* Chat list items — staggered entrance */
+@keyframes listIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.list-in { animation: listIn 0.3s var(--ease-out) both; }
+
+/* Picker/panels — neeche se smooth slide */
+@keyframes panelUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.panel-up { animation: panelUp 0.28s var(--ease-out) both; }
+
+/* Image viewer zoom-in */
+@keyframes viewerIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes viewerImg {
+  from { transform: scale(0.88); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.viewer-in { animation: viewerIn 0.22s ease both; }
+.viewer-img { animation: viewerImg 0.3s var(--ease-spring) both; }
+
+/* Header slide-down */
+@keyframes headDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.head-down { animation: headDown 0.3s var(--ease-out) both; }
+
+/* Reaction bar — behtar spring */
+.react-pop { animation: reactPop 0.28s var(--ease-spring) both; }
+
+/* Smooth scrolling har jagah */
+* { scroll-behavior: smooth; }
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ===== AwMu Theme System ===== */
+:root {
+  --bg: #f6fafd;
+  --card: #ffffff;
+  --surface: #f0f4f7;
+  --surface2: #eaeef1;
+  --border: #e5e9ec;
+  --outline: #bfc7d2;
+  --text: #171c1f;
+  --text2: #3f4850;
+  --muted: #6f7881;
+  --heading: #1a237e;
+  --active: #eaf4fb;
+}
+
+html.dark {
+  --bg: #0e1318;
+  --card: #171e26;
+  --surface: #202932;
+  --surface2: #29333e;
+  --border: #232d37;
+  --outline: #3d4a57;
+  --text: #e8edf2;
+  --text2: #b8c2cc;
+  --muted: #7f8b97;
+  --heading: #cfe0ff;
+  --active: #142636;
+}
+
+html.dark body { background: var(--bg); }

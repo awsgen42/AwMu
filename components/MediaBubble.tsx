@@ -22,6 +22,8 @@ export function ImageBubble({
       <img
         src={src}
         alt="photo"
+        loading="lazy"
+        decoding="async"
         onLoad={() => setLoaded(true)}
         onClick={(e) => { e.stopPropagation(); onView(); }}
         className="max-w-full block cursor-pointer active:opacity-90 transition"
@@ -56,6 +58,7 @@ export function VideoBubble({ src, mine }: { src: string; mine: boolean }) {
       <video
         ref={videoRef}
         src={src}
+        preload="metadata"
         onEnded={() => setPlaying(false)}
         onPause={() => setPlaying(false)}
         onClick={toggle}

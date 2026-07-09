@@ -191,3 +191,60 @@ html.dark {
 }
 
 html.dark body { background: var(--bg); }
+
+/* ===== Chat Header Animations ===== */
+
+/* Avatar entrance — spring pop */
+@keyframes avatarPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.avatar-pop { animation: avatarPop 0.4s var(--ease-spring) 0.1s both; }
+
+/* Online ring pulse — halki dharkan */
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.45); }
+  50% { box-shadow: 0 0 0 5px rgba(0, 200, 83, 0); }
+}
+.ring-pulse { animation: ringPulse 2.2s ease-in-out infinite; border-radius: 9999px; }
+
+/* Title slide-in */
+@keyframes titleIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.title-in { animation: titleIn 0.35s var(--ease-out) 0.15s both; }
+
+/* Subtitle swap — jab status badle (online -> typing) */
+@keyframes subSwap {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sub-swap { animation: subSwap 0.25s var(--ease-out) both; }
+
+/* Menu items — staggered slide */
+@keyframes menuItem {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.menu-item { animation: menuItem 0.22s var(--ease-out) both; }
+
+/* Select mode header entrance */
+@keyframes selectIn {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.select-in { animation: selectIn 0.3s var(--ease-spring) both; }
+
+/* Selected count bounce — number badalne pe */
+@keyframes countBounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.count-bounce { animation: countBounce 0.28s var(--ease-spring); }
+
+/* Back button — hover pe halka sa peeche */
+.back-slide:active svg { transform: translateX(-3px); }
+.back-slide svg { transition: transform 0.2s var(--ease-spring); }

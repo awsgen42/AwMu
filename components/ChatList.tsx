@@ -1,4 +1,5 @@
 "use client";
+import OfflineBar from "@/components/OfflineBar";
 import VerifyBanner from "@/components/VerifyBanner";
 import { initNotifications } from "@/lib/notifications";
 import { LogoFull } from "@/components/Logo";
@@ -145,6 +146,7 @@ export default function ChatList({ activeChatId }: { activeChatId?: string }) {
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg)]">
+      <OfflineBar />
       <VerifyBanner />
       <header className="px-4 pt-4 pb-3 bg-[var(--card)] border-b border-[var(--border)] shrink-0">
         <div className="flex items-center justify-between mb-3">

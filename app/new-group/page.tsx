@@ -25,12 +25,18 @@ export default function NewGroupPage() {
         return;
       }
       setUser(u);
-      const unsubUsers = onSnapshot(collection(db, "users"), (qs) => {
-        const list: any[] = [];
-        qs.forEach((d) => {
-          if (d.id !== u.uid) list.push({ uid: d.id, ...d.data() });
+      onSnapshot(collection(db, "users", u.uid, "contacts"), (cqs) => {
+        const contactUids: string[] = [];
+        cqs.forEach((d) => {
+          if (!d.data().blocked) contactUids.push(d.id);
         });
-        setUsers(list);
+        onSnapshot(collection(db, "users"), (qs) => {
+          const list: any[] = [];
+          qs.forEach((d) => {
+            if (contactUids.includes(d.id)) list.push({ uid: d.id, ...d.data() });
+          });
+          setUsers(list);
+        });
       });
     });
     return () => unsub();
@@ -90,7 +96,7 @@ export default function NewGroupPage() {
 
         <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden mb-4">
           {users.length === 0 && (
-            <p className="text-[var(--muted)] text-sm text-center py-8">No users found</p>
+            <p className="text-[var(--muted)] text-sm text-center py-8">Pehle contacts add karo — group unhi se banta hai</p>
           )}
           {users.map((x) => {
             const isSel = selected.includes(x.uid);

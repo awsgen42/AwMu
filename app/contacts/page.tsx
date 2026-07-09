@@ -277,7 +277,7 @@ export default function ContactsPage() {
                     onClick={() => openChat(c.uid)}
                     className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card)] border border-transparent hover:border-[var(--border)] active:bg-[var(--surface2)] mb-1 cursor-pointer transition"
                   >
-                    <div className="relative">
+                    <div className="relative" onClick={(e) => { e.stopPropagation(); router.push(`/profile/${c.uid}`); }}>
                       <Avatar uid={c.uid} />
                       {P(c.uid).online && (
                         <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-[var(--card)]" />

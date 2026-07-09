@@ -1,4 +1,5 @@
 "use client";
+import OfflineBar from "@/components/OfflineBar";
 import ChatHeader from "@/components/ChatHeader";
 import VoiceBubble from "@/components/VoiceBubble";
 import { ImageBubble, VideoBubble, AttachSheet } from "@/components/MediaBubble";
@@ -15,8 +16,9 @@ import { createRecorder } from "@/lib/voiceUtils";
 import ChatList from "@/components/ChatList";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  doc, getDoc, updateDoc, serverTimestamp, increment,
+  doc, getDoc, getDocs, updateDoc, serverTimestamp, increment,
   collection, addDoc, onSnapshot, query, orderBy, writeBatch,
+  limitToLast, endBefore, limit,
 } from "firebase/firestore";
 
 const REACTIONS = ["❤️", "😂", "👍", "😮", "😢", "🔥"];
@@ -59,6 +61,10 @@ export default function ChatScreen() {
   const [viewImage, setViewImage] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [olderMsgs, setOlderMsgs] = useState<any[]>([]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [noMoreOlder, setNoMoreOlder] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
   const typingTimer = useRef<any>(null);
@@ -118,7 +124,8 @@ export default function ChatScreen() {
 
       const q = query(
         collection(db, "chats", chatId, "messages"),
-        orderBy("timestamp", "asc")
+        orderBy("timestamp", "asc"),
+        limitToLast(30)
       );
       cleanups.push(
         onSnapshot(q, (qs) => {
@@ -289,6 +296,41 @@ export default function ChatScreen() {
     recorder.current?.cancel();
   };
 
+  const loadOlder = async () => {
+    if (loadingOlder || noMoreOlder) return;
+    const oldest = olderMsgs[0] || messages[0];
+    if (!oldest?.timestamp) return;
+    setLoadingOlder(true);
+
+    const el = scrollRef.current;
+    const prevHeight = el?.scrollHeight || 0;
+
+    const qs = await getDocs(
+      query(
+        collection(db, "chats", chatId, "messages"),
+        orderBy("timestamp", "asc"),
+        endBefore(oldest.timestamp),
+        limitToLast(30)
+      )
+    );
+    const older: any[] = [];
+    qs.forEach((d) => older.push({ id: d.id, ...d.data() }));
+
+    if (older.length < 30) setNoMoreOlder(true);
+    setOlderMsgs((prev) => [...older, ...prev]);
+    setLoadingOlder(false);
+
+    // Scroll position barkarar rakho (jump na ho)
+    requestAnimationFrame(() => {
+      if (el) el.scrollTop = el.scrollHeight - prevHeight;
+    });
+  };
+
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (el && el.scrollTop < 80) loadOlder();
+  };
+
   const toggleSelect = (msgId: string) => {
     setSelectedIds((ids) =>
       ids.includes(msgId) ? ids.filter((i) => i !== msgId) : [...ids, msgId]
@@ -407,8 +449,12 @@ export default function ChatScreen() {
       </div>
     <main className="h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col flex-1 min-w-0 chat-open" onClick={() => setReactionFor(null)}>
       {/* Header */}
+      <OfflineBar />
       <ChatHeader
         isGroup={isGroup}
+        online={!isGroup && !!otherUser?.online}
+        typing={isGroup ? groupTypers().length > 0 : otherTyping}
+        otherUid={otherUid}
         title={isGroup ? chatDoc?.name || "Group" : otherUser?.displayName || "..."}
         subtitle={
           isGroup
@@ -437,8 +483,19 @@ export default function ChatScreen() {
       />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 fade-up w-full max-w-[800px] mx-auto">
-        {messages.map((m, i) => {
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-4 py-3 fade-up w-full max-w-[800px] mx-auto">
+        {loadingOlder && (
+          <div className="flex justify-center py-3">
+            <span className="w-5 h-5 border-2 border-[#0088cc]/30 border-t-[#0088cc] rounded-full animate-spin" />
+          </div>
+        )}
+        {noMoreOlder && olderMsgs.length > 0 && (
+          <p className="text-center text-[10px] text-[var(--muted)] py-2">— Chat ka aghaaz —</p>
+        )}
+        {(() => {
+          const liveIds = new Set(messages.map((m) => m.id));
+          return [...olderMsgs.filter((m) => !liveIds.has(m.id)), ...messages];
+        })().map((m, i, allMsgs) => {
           const mine = m.senderId === user?.uid;
           const isSticker = m.type === "sticker";
           const isImage = m.type === "image";
@@ -447,11 +504,11 @@ export default function ChatScreen() {
           const isDeleted = !!m.deleted;
           const reacts = Object.values(m.reactions || {}).filter(Boolean) as string[];
 
-          const prevLabel = i > 0 ? dayLabel(messages[i - 1].timestamp) : null;
+          const prevLabel = i > 0 ? dayLabel(allMsgs[i - 1].timestamp) : null;
           const currLabel = dayLabel(m.timestamp);
           const showDivider = currLabel && currLabel !== prevLabel;
 
-          const samePrev = i > 0 && messages[i - 1].senderId === m.senderId && !showDivider;
+          const samePrev = i > 0 && allMsgs[i - 1].senderId === m.senderId && !showDivider;
 
           return (
             <div key={m.id}>

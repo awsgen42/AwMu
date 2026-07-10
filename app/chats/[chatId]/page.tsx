@@ -1,4 +1,9 @@
 "use client";
+import MediaPicker from "@/components/MediaPicker";
+import { askConfirm } from "@/components/ConfirmModal";
+import { askDelete } from "@/components/DeleteModal";
+import { MessagesSkeleton } from "@/components/Skeletons";
+import Confetti from "@/components/Confetti";
 import OfflineBar from "@/components/OfflineBar";
 import ChatHeader from "@/components/ChatHeader";
 import VoiceBubble from "@/components/VoiceBubble";
@@ -64,6 +69,19 @@ export default function ChatScreen() {
   const [olderMsgs, setOlderMsgs] = useState<any[]>([]);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [noMoreOlder, setNoMoreOlder] = useState(false);
+  const [confetti, setConfetti] = useState(false);
+  const [msgsLoaded, setMsgsLoaded] = useState(false);
+  const [stickerTab, setStickerTab] = useState(0);
+  const STICKER_PACKS = [
+    { name: "Love", icon: "❤️", stickers: ["❤️","💕","💖","💘","😍","🥰","😘","💋","🌹","💐","🫶","💌","👩‍❤️‍👨","💑","🌙","✨"] },
+    { name: "Happy", icon: "😄", stickers: ["😄","😂","🤣","😊","🥳","🎉","🎊","🕺","💃","🙌","👏","✌️","🤩","😎","🌈","☀️"] },
+    { name: "Sad", icon: "🥺", stickers: ["🥺","😢","😭","💔","😞","🙁","😔","🫂","🤧","😿","🌧️","🖤","😪","💧","🍂","🌚"] },
+    { name: "Angry", icon: "😤", stickers: ["😤","😠","😡","🤬","👿","💢","🔥","⚡","🙄","😒","😑","🤨","👊","💥","🌋","😾"] },
+    { name: "Fun", icon: "🤪", stickers: ["🤪","😜","🤡","👻","💩","🙈","🙉","🙊","🐸","🦄","🍕","🎮","🏆","🚀","👽","🤖"] },
+    { name: "Duas", icon: "🤲", stickers: ["🤲","☪️","🕌","📿","🌙","⭐","🕋","💚","🌹","✨","🙏","☀️","🌄","🕊️","💫","🌺"] },
+  ];
+  const [swipeState, setSwipeState] = useState<{ id: string; dx: number; active: boolean } | null>(null);
+  const lastMsgId = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
@@ -73,6 +91,7 @@ export default function ChatScreen() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [showAttach, setShowAttach] = useState(false);
   const recorder = useRef<any>(null);
   const recTimer = useRef<any>(null);
@@ -137,12 +156,27 @@ export default function ChatScreen() {
             const m = { id: d.id, ...d.data() } as any;
             list.push(m);
             if (m.senderId !== u.uid && m.status !== "seen") {
-              batch.update(d.ref, { status: "seen" });
-              hasUnseen = true;
+              const myPrivacy = members[u.uid]?.privacy;
+              if (!myPrivacy?.hideReadReceipts) {
+                batch.update(d.ref, { status: "seen" });
+                hasUnseen = true;
+              }
             }
           });
 
           setMessages(list);
+          setMsgsLoaded(true);
+
+          // Confetti triggers — naya message celebration words rakhta ho
+          const last = list[list.length - 1];
+          if (last && last.id !== lastMsgId.current && lastMsgId.current !== "") {
+            const t = (last.text || "").toLowerCase();
+            if (/happy birthday|janamdin|salgirah|mubarak|congrats|congratulations|🎂|🎉|🎊/.test(t)) {
+              setConfetti(true);
+            }
+          }
+          if (last) lastMsgId.current = last.id;
+
           if (hasUnseen) {
             batch.commit();
             updateDoc(doc(db, "chats", chatId), { [`unread.${u.uid}`]: 0 }).catch(() => {});
@@ -158,11 +192,23 @@ export default function ChatScreen() {
   }, [chatId, router]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages]);
+
+  // Draft load (chat khulte hi)
+  useEffect(() => {
+    try {
+      const d = localStorage.getItem(`awmu-draft-${chatId}`);
+      if (d) setText(d);
+    } catch {}
+  }, [chatId]);
 
   const handleTyping = (val: string) => {
     setText(val);
+    try {
+      if (val.trim()) localStorage.setItem(`awmu-draft-${chatId}`, val);
+      else localStorage.removeItem(`awmu-draft-${chatId}`);
+    } catch {}
     if (!user) return;
     updateDoc(doc(db, "chats", chatId), { [`typing.${user.uid}`]: true }).catch(() => {});
     clearTimeout(typingTimer.current);
@@ -180,8 +226,9 @@ export default function ChatScreen() {
       senderId: user.uid,
       timestamp: serverTimestamp(),
       status: "sent",
+      ...(chatDoc?.disappearing ? { expireAt: Date.now() + 24 * 60 * 60 * 1000 } : {}),
       replyTo: reply
-        ? { id: reply.id, text: reply.text || reply.sticker || (reply.type === "image" ? "📷 Photo" : reply.type === "voice" ? "🎤 Voice" : ""), senderId: reply.senderId }
+        ? { id: reply.id, text: reply.text || reply.sticker || (reply.type === "image" ? "Photo" : reply.type === "voice" ? "🎤 Voice" : ""), senderId: reply.senderId }
         : null,
       reactions: {},
       ...payload,
@@ -202,9 +249,11 @@ export default function ChatScreen() {
       [`typing.${user.uid}`]: false,
     });
 
-    const recipients = chatDoc?.isGroup
+    const mutedList = chatDoc?.mutedBy || [];
+    const recipients = (chatDoc?.isGroup
       ? (chatDoc.participants || []).filter((x: string) => x !== user.uid)
-      : [otherUid];
+      : [otherUid]
+    ).filter((x: string) => !mutedList.includes(x));
     const myName = members[user.uid]?.displayName || "New message";
     fetch("/api/notify", {
       method: "POST",
@@ -228,7 +277,7 @@ export default function ChatScreen() {
 
   const sendSticker = async (s: string) => {
     setShowPicker(false);
-    await pushMessage({ type: "sticker", sticker: s, text: "" }, "🎟️ Sticker");
+    await pushMessage({ type: "sticker", sticker: s, text: "" }, "Sticker");
   };
 
   const sendImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +287,7 @@ export default function ChatScreen() {
     setSendingImg(true);
     try {
       const dataUrl = await compressImage(file);
-      await pushMessage({ type: "image", image: dataUrl, text: "" }, "📷 Photo");
+      await pushMessage({ type: "image", image: dataUrl, text: "" }, "Photo");
     } catch (err: any) {
       alert(err.message);
     }
@@ -272,7 +321,7 @@ export default function ChatScreen() {
         if (recSecsRef.current >= 59) stopRecording();
       }, 1000);
     } catch {
-      alert("Mic ki ijazat chahiye — browser settings me allow karo");
+      alert("Microphone permission needed — allow it in browser settings");
     }
   };
 
@@ -283,7 +332,7 @@ export default function ChatScreen() {
       const dataUrl = await recorder.current.stop();
       await pushMessage(
         { type: "voice", audio: dataUrl, duration: recSecsRef.current, text: "" },
-        "🎤 Voice message"
+        "Voice message"
       );
     } catch (err: any) {
       alert(err.message);
@@ -339,7 +388,7 @@ export default function ChatScreen() {
 
   const bulkDelete = async (ids: string[]) => {
     if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} message${ids.length > 1 ? "s" : ""} for everyone?`)) return;
+    if (!await askConfirm({ message: `Delete ${ids.length} message${ids.length > 1 ? "s" : ""} for everyone?`, danger: true, confirmText: "Yes" })) return;
     // Firestore batch limit 500 — chunks me karo
     for (let i = 0; i < ids.length; i += 400) {
       const chunk = ids.slice(i, i + 400);
@@ -355,16 +404,120 @@ export default function ChatScreen() {
     setSelectedIds([]);
   };
 
-  const deleteForEveryone = async (msgId: string) => {
+  const deleteForEveryone = async (msgId: string, isMine: boolean) => {
     setReactionFor(null);
-    if (!confirm("Delete for everyone?")) return;
+    const choice = await askDelete({ canDeleteForEveryone: isMine });
+    if (choice === "cancel") return;
+
+    if (choice === "everyone") {
+      await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
+        deleted: true, text: "", image: null, audio: null, video: null, sticker: null, reactions: {},
+      });
+    } else {
+      // Delete for me — sirf mere liye hide (deletedFor array)
+      const msg = messages.find((m) => m.id === msgId) || olderMsgs.find((m) => m.id === msgId);
+      const list = msg?.deletedFor || [];
+      await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
+        deletedFor: [...list, user.uid],
+      });
+    }
+  };
+
+  const toggleMute = async () => {
+    if (!user) return;
+    const cur = !!chatDoc?.mutedBy?.includes(user.uid);
+    const list = chatDoc?.mutedBy || [];
+    await updateDoc(doc(db, "chats", chatId), {
+      mutedBy: cur ? list.filter((x: string) => x !== user.uid) : [...list, user.uid],
+    }).catch(() => {});
+  };
+
+  const toggleDisappearing = async () => {
+    const cur = !!chatDoc?.disappearing;
+    const ok = await askConfirm({
+      title: "Disappearing messages",
+      message: cur
+        ? "Turn off? New messages will be permanent."
+        : "Turn on? New messages will auto-delete after 24 hours (for everyone).",
+      confirmText: cur ? "Turn off" : "Turn on",
+    });
+    if (!ok) return;
+    await updateDoc(doc(db, "chats", chatId), { disappearing: !cur }).catch(() => {});
+  };
+
+  const importRef = useRef<HTMLInputElement>(null);
+
+  const importChat = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    e.target.value = "";
+    const textContent = await file.text();
+    const lines = textContent.split("\n").filter((l) => /^\[.+\] (Me|.+): /.test(l));
+    if (!lines.length) {
+      alert("No messages found — use an AwMu-exported .txt file");
+      return;
+    }
+    const ok = await askConfirm({
+      title: "Import chat",
+      message: `${lines.length} messages found. Import them into this chat? (They'll appear as new messages from you, prefixed with the original sender)`,
+      confirmText: "Import",
+    });
+    if (!ok) return;
+
+    let count = 0;
+    for (const line of lines.slice(0, 200)) {
+      const m = line.match(/^\[(.+?)\] (.+?): (.*)$/);
+      if (!m) continue;
+      const content = `[${m[1]}] ${m[2]}: ${m[3]}`;
+      await addDoc(collection(db, "chats", chatId, "messages"), {
+        senderId: user.uid,
+        text: content,
+        type: "text",
+        timestamp: serverTimestamp(),
+        status: "sent",
+        imported: true,
+        reactions: {},
+      });
+      count++;
+    }
+    alert(`Imported ${count} messages ✓`);
+  };
+
+  const sendGif = async (url: string) => {
+    setShowPicker(false);
+    await pushMessage({ type: "gif", gif: url }, "GIF");
+  };
+
+  const exportChat = async () => {
+    const qs = await getDocs(
+      query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"))
+    );
+    const lines: string[] = [`AwMu Chat Export — ${new Date().toLocaleString()}`, ""];
+    qs.forEach((d) => {
+      const m = d.data() as any;
+      if (m.deleted) return;
+      const time = m.timestamp?.toDate?.()?.toLocaleString("en-US", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) || "";
+      const who = m.senderId === user?.uid ? "Me" : (members[m.senderId]?.displayName || "Them");
+      const content = m.type === "text" ? m.text : m.type === "image" ? "[Photo]" : m.type === "video" ? "[Video]" : m.type === "voice" ? `[Voice ${m.duration}s]` : m.type === "sticker" ? m.sticker : "";
+      lines.push(`[${time}] ${who}: ${content}`);
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `awmu-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleStar = async (msgId: string) => {
+    setReactionFor(null);
+    const msg = messages.find((m) => m.id === msgId) || olderMsgs.find((m) => m.id === msgId);
+    if (!msg || !user) return;
+    const starred = msg.starredBy || [];
+    const isStarred = starred.includes(user.uid);
     await updateDoc(doc(db, "chats", chatId, "messages", msgId), {
-      deleted: true,
-      text: "",
-      image: null,
-      audio: null,
-      sticker: null,
-      reactions: {},
+      starredBy: isStarred ? starred.filter((x: string) => x !== user.uid) : [...starred, user.uid],
     });
   };
 
@@ -385,13 +538,24 @@ export default function ChatScreen() {
   const onTouchMove = (m: any) => (e: React.TouchEvent) => {
     const dx = e.touches[0].clientX - touchStartX.current;
     if (Math.abs(dx) > 10) clearTimeout(longPressTimer.current);
-    if (dx > 60) {
-      setReplyTo(m);
-      touchStartX.current = e.touches[0].clientX + 999;
-      if (navigator.vibrate) navigator.vibrate(20);
+    // Bubble ungli ke saath — reply abhi NAHI, sirf follow (resistance ke saath)
+    if (dx > 4 && !m.deleted) {
+      setSwipeState({ id: m.id, dx: Math.min(dx * 0.7, 85) });
+    } else if (dx < 0) {
+      setSwipeState(null);
     }
   };
-  const onTouchEnd = () => clearTimeout(longPressTimer.current);
+  const onTouchEnd = (m: any) => () => {
+    clearTimeout(longPressTimer.current);
+    // Chhorne pe faisla — threshold paar hua to reply + vibrate
+    setSwipeState((cur) => {
+      if (cur && cur.id === m.id && cur.dx > 55 && !m.deleted) {
+        setReplyTo(m);
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+      return null; // spring-back
+    });
+  };
 
   const isGroup = !!chatDoc?.isGroup;
 
@@ -422,6 +586,22 @@ export default function ChatScreen() {
     });
   };
 
+  // Sirf emoji wala message? (1-3 emojis, koi text nahi)
+  const emojiOnly = (text: string) => {
+    if (!text) return null;
+    const stripped = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{2764}]/gu, "");
+    if (stripped.trim() !== "") return null;
+    const chars = [...text.trim()];
+    if (chars.length === 0 || chars.length > 6) return null;
+    return text.trim();
+  };
+
+  const emojiAnimClass = (e: string) => {
+    if (/❤|💕|💖|💗|💘|🥰|😍/.test(e)) return "emoji-heart";
+    if (/😂|🤣/.test(e)) return "emoji-laugh";
+    return "emoji-big";
+  };
+
   const formatLastSeen = (ts: any) => {
     if (!ts?.toDate) return "offline";
     const d = ts.toDate();
@@ -447,12 +627,12 @@ export default function ChatScreen() {
       <div className="hidden lg:block w-[360px] border-r border-[var(--border)] shrink-0 h-full">
         <ChatList activeChatId={chatId} />
       </div>
-    <main className="h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col flex-1 min-w-0 chat-open" onClick={() => setReactionFor(null)}>
+    <main className={`chat-screen bg-[var(--bg)] text-[var(--text)] flex-1 min-w-0 chat-open theme-${chatDoc?.theme || "azure"}`} onClick={() => setReactionFor(null)}>
       {/* Header */}
       <OfflineBar />
       <ChatHeader
         isGroup={isGroup}
-        online={!isGroup && !!otherUser?.online}
+        online={!isGroup && !!otherUser?.online && !otherUser?.privacy?.hideOnline}
         typing={isGroup ? groupTypers().length > 0 : otherTyping}
         otherUid={otherUid}
         title={isGroup ? chatDoc?.name || "Group" : otherUser?.displayName || "..."}
@@ -463,8 +643,10 @@ export default function ChatScreen() {
               : `${chatDoc?.participants?.length || 0} members`
             : otherTyping
             ? "typing..."
-            : otherUser?.online
+            : otherUser?.online && !otherUser?.privacy?.hideOnline
             ? "online"
+            : otherUser?.privacy?.hideLastSeen
+            ? ""
             : formatLastSeen(otherUser?.lastSeen)
         }
         photoURL={otherUser?.photoURL}
@@ -480,21 +662,49 @@ export default function ChatScreen() {
         }}
         onDeleteSelected={() => bulkDelete(selectedIds)}
         onDeleteAll={() => bulkDelete(messages.filter((m) => !m.deleted).map((m) => m.id))}
+        onTheme={(t) => updateDoc(doc(db, "chats", chatId), { theme: t }).catch(() => {})}
+        onExport={exportChat}
+        onImport={() => importRef.current?.click()}
+        onSearch={() => router.push(`/search?chat=${chatId}`)}
+        onViewContact={() => otherUid && router.push(`/profile/${otherUid}`)}
+        onMedia={() => otherUid && router.push(`/profile/${otherUid}`)}
+        muted={!!chatDoc?.mutedBy?.includes(user?.uid)}
+        disappearing={!!chatDoc?.disappearing}
+        onMute={toggleMute}
+        onDisappearing={toggleDisappearing}
       />
 
       {/* Messages */}
-      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-4 py-3 fade-up w-full max-w-[800px] mx-auto">
+      {!msgsLoaded ? (
+        <MessagesSkeleton />
+      ) : (
+      <div ref={scrollRef} onScroll={onScroll} className="chat-scroll px-4 py-3 w-full max-w-[800px] mx-auto chat-doodle">
+        <div className="flex justify-center my-2">
+          <p className="privacy-banner rounded-xl px-4 py-2 text-[11px] text-[#b8860b] text-center max-w-[320px] leading-relaxed">
+            🔒 This chat is private — only people in this chat can see messages
+          </p>
+        </div>
         {loadingOlder && (
           <div className="flex justify-center py-3">
             <span className="w-5 h-5 border-2 border-[#0088cc]/30 border-t-[#0088cc] rounded-full animate-spin" />
           </div>
         )}
         {noMoreOlder && olderMsgs.length > 0 && (
-          <p className="text-center text-[10px] text-[var(--muted)] py-2">— Chat ka aghaaz —</p>
+          <p className="text-center text-[10px] text-[var(--muted)] py-2">— Beginning of chat —</p>
         )}
         {(() => {
           const liveIds = new Set(messages.map((m) => m.id));
-          return [...olderMsgs.filter((m) => !liveIds.has(m.id)), ...messages];
+          return [...olderMsgs.filter((m) => !liveIds.has(m.id)), ...messages]
+            .filter((m) => !m.deletedFor?.includes(user?.uid))
+            .filter((m) => {
+              if (m.expireAt && m.expireAt < Date.now()) {
+                updateDoc(doc(db, "chats", chatId, "messages", m.id), {
+                  deleted: true, text: "", image: null, audio: null, video: null, sticker: null,
+                }).catch(() => {});
+                return false;
+              }
+              return true;
+            });
         })().map((m, i, allMsgs) => {
           const mine = m.senderId === user?.uid;
           const isSticker = m.type === "sticker";
@@ -532,18 +742,21 @@ export default function ChatScreen() {
                 <div
                   onTouchStart={selectMode ? undefined : onTouchStart(m)}
                   onTouchMove={selectMode ? undefined : onTouchMove(m)}
-                  onTouchEnd={selectMode ? undefined : onTouchEnd}
+                  onTouchEnd={selectMode ? undefined : onTouchEnd(m)}
                   className={`relative select-none ${
                     isSticker && !isDeleted
                       ? "px-2 py-1"
                       : (isImage || isVideo) && !isDeleted
-                      ? `max-w-[75%] p-1.5 rounded-2xl ${mine ? "bg-[#0088cc]" : "bg-[var(--card)] border border-[var(--border)]"}`
+                      ? `max-w-[75%] p-1.5 rounded-2xl ${mine ? "bubble-mine" : "bg-[var(--card)] border border-[var(--border)]"}`
                       : `max-w-[75%] px-3 py-2 rounded-2xl text-[15px] leading-relaxed ${
                           mine
-                            ? "bg-[#0088cc] text-white rounded-br-[4px]"
+                            ? "bubble-mine text-white rounded-br-[4px]"
                             : "bg-[var(--card)] text-[var(--text)] border border-[var(--border)] rounded-bl-[4px]"
                         }`
-                  } ${reacts.length ? "mb-3" : ""}`}
+                  } ${reacts.length ? "mb-3" : ""} ${!samePrev && !isSticker && !isDeleted && m.type !== "image" && m.type !== "video" ? (mine ? "tail-r" : "tail-l") : ""} swipe-bubble ${swipeState?.id === m.id ? "swiping" : ""}`}
+                        style={{
+                          transform: swipeState?.id === m.id ? `translateX(${swipeState.dx}px)` : undefined,
+                        }}
                 >
                   {isGroup && !mine && !isDeleted && (
                     <p className="text-[11px] font-semibold mb-0.5" style={{ color: senderColor(m.senderId) }}>
@@ -558,7 +771,9 @@ export default function ChatScreen() {
                     </div>
                   )}
 
-                  {isDeleted ? (
+                  {m.type === "gif" && !isDeleted ? (
+                    <img src={m.gif} alt="GIF" loading="lazy" className="rounded-xl max-w-[220px]" />
+                  ) : isDeleted ? (
                     <p className={`italic text-[13px] flex items-center gap-1 ${mine ? "text-white/60" : "text-[var(--muted)]"}`}>
                       <BanIcon size={13} /> This message was deleted
                     </p>
@@ -570,11 +785,14 @@ export default function ChatScreen() {
                     <VideoBubble src={m.video} mine={mine} />
                   ) : isSticker ? (
                     <p className="text-7xl leading-none drop-shadow-sm">{m.sticker}</p>
+                  ) : emojiOnly(m.text) ? (
+                    <p className={`text-5xl leading-tight ${emojiAnimClass(m.text)}`}>{m.text}</p>
                   ) : (
                     <p className="break-words">{m.text}</p>
                   )}
 
                   <p className={`text-[10px] mt-0.5 text-right ${isSticker ? "text-[var(--muted)]" : mine ? "text-white/70" : "text-[var(--muted)]"} ${isImage ? "px-1 pb-0.5" : ""}`}>
+                    {m.starredBy?.includes(user?.uid) && <span className="text-[#f5a623]">★ </span>}
                     {formatTime(m.timestamp)}
                     {mine && (
                       <span className={m.status === "seen" ? (isSticker ? "text-[#00b0ff]" : "text-[#8dfcff] font-bold") : ""}>
@@ -599,9 +817,17 @@ export default function ChatScreen() {
                           {r}
                         </button>
                       ))}
-                      {mine && (
+                      <button
+                        onClick={() => toggleStar(m.id)}
+                        className="text-lg active:scale-125 transition border-l border-[var(--border)] pl-1.5"
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill={m.starredBy?.includes(user?.uid) ? "#f5a623" : "none"} stroke={m.starredBy?.includes(user?.uid) ? "#f5a623" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6L3.2 9.4l6.1-.9L12 3z" />
+                        </svg>
+                      </button>
+                      {(
                         <button
-                          onClick={() => deleteForEveryone(m.id)}
+                          onClick={() => deleteForEveryone(m.id, mine)}
                           className="text-lg active:scale-125 transition border-l border-[var(--border)] pl-1.5"
                         >
                           <TrashIcon size={17} className="text-[#ba1a1a]" />
@@ -616,6 +842,7 @@ export default function ChatScreen() {
         })}
         <div ref={bottomRef} />
       </div>
+      )}
 
       {/* Fullscreen image viewer */}
       {showAttach && (
@@ -625,6 +852,8 @@ export default function ChatScreen() {
           onClose={() => setShowAttach(false)}
         />
       )}
+
+      {confetti && <Confetti onDone={() => setConfetti(false)} />}
 
       {viewImage && (
         <div
@@ -653,7 +882,7 @@ export default function ChatScreen() {
           <div className="border-l-2 border-[#0088cc] pl-2">
             <p className="text-[10px] text-[#0088cc] font-medium">{senderName(replyTo.senderId)}</p>
             <p className="text-xs text-[var(--text2)] truncate max-w-[250px]">
-              {replyTo.text || replyTo.sticker || (replyTo.type === "image" ? "📷 Photo" : "🎤 Voice")}
+              {replyTo.text || replyTo.sticker || (replyTo.type === "image" ? "Photo" : "🎤 Voice")}
             </p>
           </div>
           <button onClick={() => setReplyTo(null)} className="text-[var(--muted)] px-2"><XIcon size={18} /></button>
@@ -662,101 +891,80 @@ export default function ChatScreen() {
 
       {/* Emoji/Sticker Picker */}
       {showPicker && (
-        <div className="border-t border-[var(--border)] bg-[var(--card)] panel-up" onClick={(e) => e.stopPropagation()}>
-          <div className="flex border-b border-[var(--border)]">
-            <button
-              onClick={() => setPickerTab("emoji")}
-              className={`flex-1 py-2.5 text-sm font-medium ${pickerTab === "emoji" ? "text-[#0088cc] border-b-2 border-[#0088cc]" : "text-[var(--muted)]"}`}
-            >
-              Emoji
-            </button>
-            <button
-              onClick={() => setPickerTab("sticker")}
-              className={`flex-1 py-2.5 text-sm font-medium ${pickerTab === "sticker" ? "text-[#0088cc] border-b-2 border-[#0088cc]" : "text-[var(--muted)]"}`}
-            >
-              Stickers
-            </button>
-          </div>
-
-          {pickerTab === "emoji" ? (
-            <>
-              <div className="flex gap-1 px-3 pt-2">
-                {EMOJI_TABS.map((t, i) => (
-                  <button
-                    key={t.name}
-                    onClick={() => setEmojiCat(i)}
-                    className={`px-2.5 py-1 rounded-lg text-lg ${emojiCat === i ? "bg-[var(--surface2)]" : ""}`}
-                  >
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-8 gap-1 p-3 h-44 overflow-y-auto">
-                {EMOJI_TABS[emojiCat].list.map((em) => (
-                  <button
-                    key={em}
-                    onClick={() => setText((t) => t + em)}
-                    className="text-2xl p-1 active:scale-125 transition"
-                  >
-                    {em}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-4 gap-2 p-3 h-52 overflow-y-auto">
-              {STICKERS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendSticker(s)}
-                  className="text-5xl p-2 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface2)] active:scale-110 transition"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <MediaPicker
+          onEmoji={(e) => setText((t) => t + e)}
+          onGif={sendGif}
+          onSticker={sendGif}
+          onCreateSticker={() => { setShowPicker(false); fileRef.current?.click(); }}
+        />
       )}
 
       {/* Input bar */}
-      <div className="bg-[var(--card)] border-t border-[var(--border)] shadow-[0_-4px_12px_rgba(26,35,126,0.04)]"><div className="flex items-center gap-2 p-3 w-full max-w-[800px] mx-auto">
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowPicker((s) => !s); }}
-          className={`text-2xl shrink-0 ${showPicker ? "opacity-100" : "opacity-50"}`}
-        >
-          <SmileIcon size={24} className="text-[var(--text2)]" />
-        </button>
-        <input
-          value={text}
-          onChange={(e) => handleTyping(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          onFocus={() => setShowPicker(false)}
-          placeholder="Type a message..."
-          className="flex-1 px-4 py-3 rounded-xl bg-[var(--surface)] text-[var(--text)] placeholder-[var(--muted)] outline-none focus:ring-2 focus:ring-[#0088cc] text-sm min-w-0"
-        />
-        <input ref={fileRef} type="file" accept="image/*" onChange={sendImage} className="hidden" />
-        <button onClick={() => fileRef.current?.click()} className="text-2xl opacity-50 shrink-0">
-          {sendingImg ? <LoaderIcon size={22} className="text-[#0088cc]" /> : <PaperclipIcon size={22} className="text-[var(--text2)]" />}
-        </button>
-        {text.trim() ? (
-          <button
-            onClick={sendMessage}
-            className="w-12 h-12 rounded-full bg-[#0088cc] flex items-center justify-center text-lg shrink-0 text-white active:bg-[#006193] send-tap"
-          >
-            <SendIcon size={19} className="-ml-0.5 mt-0.5" />
-          </button>
-        ) : (
-          <button
-            onClick={() => (recording ? stopRecording() : startRecording())}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-lg shrink-0 text-white ${
-              recording ? "bg-[#ba1a1a] animate-pulse" : "bg-[#0088cc]"
-            }`}
-          >
-            {recording ? <StopIcon size={20} /> : <MicIcon size={20} />}
-          </button>
-        )}
-      </div></div>
+      <div className="bg-[var(--card)]/90 backdrop-blur border-t border-[var(--border)]">
+        <div className="flex items-center gap-2 p-2.5 w-full max-w-[800px] mx-auto">
+          {/* Pill: emoji + input + attach + camera */}
+          <div className="flex items-center flex-1 min-w-0 bg-[var(--surface)] rounded-full pl-1.5 pr-1.5">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowPicker((v) => !v); }}
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            >
+              <SmileIcon size={22} className={showPicker ? "text-[#0088cc]" : "text-[var(--muted)]"} />
+            </button>
+            <input
+              value={text}
+              onChange={(e) => handleTyping(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              onFocus={() => setShowPicker(false)}
+              placeholder="Message"
+              className="flex-1 bg-transparent outline-none text-[15px] text-[var(--text)] placeholder-[var(--muted)] min-w-0 py-2.5 px-1"
+            />
+            <input ref={fileRef} type="file" accept="image/*" onChange={sendImage} className="hidden" />
+            <input ref={videoFileRef} type="file" accept="video/*" onChange={sendVideo} className="hidden" />
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={sendImage} className="hidden" />
+            <input ref={importRef} type="file" accept=".txt" onChange={importChat} className="hidden" />
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowAttach(true); }}
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            >
+              {sendingImg ? (
+                <LoaderIcon size={20} className="text-[#0088cc]" />
+              ) : (
+                <PaperclipIcon size={20} className="text-[var(--muted)]" />
+              )}
+            </button>
+            <button
+              onClick={() => cameraRef.current?.click()}
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--muted)]">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+            </button>
+          </div>
+
+          {/* FAB — send / mic */}
+          {text.trim() ? (
+            <button
+              onClick={sendMessage}
+              className="w-12 h-12 rounded-full bubble-mine flex items-center justify-center shrink-0 text-white shadow-[0_4px_14px_rgba(0,136,204,0.4)] send-tap"
+            >
+              <SendIcon size={19} className="-ml-0.5 mt-0.5" />
+            </button>
+          ) : (
+            <button
+              onClick={() => (recording ? stopRecording() : startRecording())}
+              className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-white send-tap ${
+                recording
+                  ? "bg-[#ba1a1a] animate-pulse shadow-[0_4px_14px_rgba(186,26,26,0.45)]"
+                  : "bubble-mine shadow-[0_4px_14px_rgba(0,136,204,0.4)]"
+              }`}
+            >
+              {recording ? <StopIcon size={20} /> : <MicIcon size={20} />}
+            </button>
+          )}
+        </div>
+      </div>
     </main>
     </div>
   );

@@ -248,3 +248,463 @@ html.dark body { background: var(--bg); }
 /* Back button — hover pe halka sa peeche */
 .back-slide:active svg { transform: translateX(-3px); }
 .back-slide svg { transition: transform 0.2s var(--ease-spring); }
+
+/* ===== Fun: Animated emoji ===== */
+@keyframes emojiPop {
+  0% { transform: scale(0.3) rotate(-15deg); }
+  60% { transform: scale(1.35) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.emoji-big { animation: emojiPop 0.5s var(--ease-spring) both; display: inline-block; }
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.25); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.15); }
+}
+.emoji-heart { animation: heartBeat 1.4s ease-in-out 2; display: inline-block; }
+
+@keyframes emojiShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-14deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+.emoji-laugh { animation: emojiShake 0.7s ease-in-out 2; display: inline-block; }
+
+/* ===== Fun: Confetti ===== */
+@keyframes confettiFall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0.6; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 9px;
+  height: 14px;
+  z-index: 100;
+  pointer-events: none;
+  animation: confettiFall linear both;
+}
+
+/* ===== Chat themes (bubble colors via variables) ===== */
+.theme-azure { --bub-from: #0088cc; --bub-to: #0088cc; --chat-bg: var(--bg); }
+.theme-sunset { --bub-from: #ff6b35; --bub-to: #d64550; --chat-bg: var(--bg); }
+.theme-forest { --bub-from: #00a86b; --bub-to: #007a4d; --chat-bg: var(--bg); }
+.theme-royal { --bub-from: #7b2ff7; --bub-to: #4c56af; --chat-bg: var(--bg); }
+.theme-rose { --bub-from: #e91e8c; --bub-to: #b8106b; --chat-bg: var(--bg); }
+.theme-night { --bub-from: #00d4ff; --bub-to: #0066aa; --chat-bg: var(--bg); }
+
+.bubble-mine {
+  background: linear-gradient(135deg, var(--bub-from), var(--bub-to));
+}
+
+/* ===== Fun: Animated emoji ===== */
+@keyframes emojiPop {
+  0% { transform: scale(0.3) rotate(-15deg); }
+  60% { transform: scale(1.35) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.emoji-big { animation: emojiPop 0.5s var(--ease-spring) both; display: inline-block; }
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.25); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.15); }
+}
+.emoji-heart { animation: heartBeat 1.4s ease-in-out 2; display: inline-block; }
+
+@keyframes emojiShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-14deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+.emoji-laugh { animation: emojiShake 0.7s ease-in-out 2; display: inline-block; }
+
+/* ===== Fun: Confetti ===== */
+@keyframes confettiFall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0.6; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 9px;
+  height: 14px;
+  z-index: 100;
+  pointer-events: none;
+  animation: confettiFall linear both;
+}
+
+/* ===== Chat themes (bubble colors via variables) ===== */
+.theme-azure { --bub-from: #0088cc; --bub-to: #0088cc; --chat-bg: var(--bg); }
+.theme-sunset { --bub-from: #ff6b35; --bub-to: #d64550; --chat-bg: var(--bg); }
+.theme-forest { --bub-from: #00a86b; --bub-to: #007a4d; --chat-bg: var(--bg); }
+.theme-royal { --bub-from: #7b2ff7; --bub-to: #4c56af; --chat-bg: var(--bg); }
+.theme-rose { --bub-from: #e91e8c; --bub-to: #b8106b; --chat-bg: var(--bg); }
+.theme-night { --bub-from: #00d4ff; --bub-to: #0066aa; --chat-bg: var(--bg); }
+
+.bubble-mine {
+  background: linear-gradient(135deg, var(--bub-from), var(--bub-to));
+}
+
+/* ===== Skeleton Loading ===== */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skel {
+  background: linear-gradient(
+    90deg,
+    var(--surface2) 25%,
+    var(--surface) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+.skel-circle { border-radius: 9999px; }
+
+/* ===== Ripple Buttons ===== */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.35) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.45s ease, opacity 0.6s ease;
+  pointer-events: none;
+}
+.ripple:active::after {
+  transform: scale(2.5);
+  opacity: 1;
+  transition: 0s;
+}
+/* Dark surfaces pe halka ripple */
+.ripple-soft::after {
+  background: radial-gradient(circle at center, rgba(0,136,204,0.18) 0%, transparent 65%);
+}
+
+/* ===== Modal entrance (future modals ke liye) ===== */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-in { animation: modalIn 0.28s var(--ease-spring) both; }
+
+/* ===== Premium Confirm Modal ===== */
+@keyframes backdropIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(4px); }
+}
+@keyframes backdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.backdrop-in { animation: backdropIn 0.25s ease both; }
+.backdrop-out { animation: backdropOut 0.2s ease both; }
+
+@keyframes modalSpring {
+  0% { opacity: 0; transform: scale(0.8) translateY(24px); }
+  60% { opacity: 1; transform: scale(1.03) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes modalOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.9) translateY(12px); }
+}
+.modal-spring { animation: modalSpring 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.modal-out { animation: modalOut 0.18s ease-in both; }
+
+@keyframes iconPop {
+  0% { transform: scale(0); }
+  55% { transform: scale(1.2) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.icon-pop { animation: iconPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.12s both; }
+
+@keyframes iconRing {
+  0% { box-shadow: 0 0 0 0 var(--ring-c); }
+  100% { box-shadow: 0 0 0 18px transparent; }
+}
+.icon-ring { animation: iconRing 0.8s ease 0.25s both; }
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.row-in { animation: rowIn 0.3s var(--ease-out) both; }
+
+/* ===== Auth Action Animations ===== */
+
+/* Error pe card shake */
+@keyframes cardShake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-10px); }
+  30% { transform: translateX(8px); }
+  45% { transform: translateX(-6px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+.card-shake { animation: cardShake 0.45s ease; }
+
+/* Success pe button morph */
+@keyframes successPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.success-pop { animation: successPop 0.4s var(--ease-spring); }
+
+/* Checkmark draw */
+@keyframes checkDraw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+.check-draw {
+  stroke-dasharray: 24;
+  animation: checkDraw 0.4s ease 0.1s both;
+}
+
+/* Form mode flip — cross fade */
+@keyframes formSwap {
+  from { opacity: 0; transform: translateY(12px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.form-swap { animation: formSwap 0.32s var(--ease-out) both; }
+
+/* Button loading shimmer */
+@keyframes btnPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.btn-loading { animation: btnPulse 1.2s ease-in-out infinite; }
+
+/* Error text slide-in */
+@keyframes errIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.err-in { animation: errIn 0.25s var(--ease-out) both; }
+
+/* ===== WhatsApp-style Chat Look ===== */
+
+/* Doodle pattern background */
+.chat-doodle {
+  background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%237f8b97' stroke-opacity='0.09' stroke-width='1.5'%3E%3Ccircle cx='20' cy='20' r='6'/%3E%3Cpath d='M85 15l5 5m0-5l-5 5'/%3E%3Crect x='50' y='45' width='11' height='11' rx='3'/%3E%3Cpath d='M15 80c4-6 10-6 14 0'/%3E%3Ccircle cx='95' cy='85' r='4'/%3E%3Cpath d='M60 100l4-7 4 7z'/%3E%3Cpath d='M100 45h10M105 40v10'/%3E%3Cpath d='M30 55a5 5 0 1 1 8 4l-4 4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 260px 260px;
+}
+
+/* Bubble tails — pehle message of group pe */
+.tail-r::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: 0;
+  width: 14px;
+  height: 13px;
+  background: var(--bub-from, #0088cc);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.tail-l::after {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 0;
+  width: 14px;
+  height: 13px;
+  background: var(--card);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+/* Privacy banner */
+.privacy-banner {
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.15);
+}
+
+/* ===== Snappy Toggles ===== */
+.tgl {
+  transition: background-color 0.15s ease;
+}
+.tgl-knob {
+  transition: transform 0.16s cubic-bezier(0.34, 1.3, 0.64, 1);
+  will-change: transform;
+}
+.tgl:active .tgl-knob {
+  transform-origin: center;
+  scale: 1.12; /* dabate waqt knob halka bara — tactile feel */
+}
+
+/* Checkboxes/chips — fast state change */
+.transition {
+  transition-duration: 0.15s !important;
+  transition-timing-function: cubic-bezier(0.3, 0.9, 0.4, 1) !important;
+}
+
+/* ===== Native App Feel ===== */
+
+/* Overscroll bounce/glow khatam — app jaisi thos feel */
+html, body {
+  overscroll-behavior: none;
+  height: 100%;
+}
+
+/* Text selection band (sirf inputs me allowed) — native apps me text select nahi hota */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Tap highlight ka grey flash khatam */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS-style momentum scrolling har scrollable pe */
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Scrollbars gayab (native apps me nahi hote) */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+* {
+  scrollbar-width: none;
+}
+
+/* Images/icons drag na hon */
+img, svg {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Long-press pe context menu na aye images pe (native feel) */
+img {
+  -webkit-touch-callout: none;
+}
+
+/* Fixed viewport — address bar hide/show pe jump na ho */
+html {
+  height: 100dvh;
+}
+
+/* Safe areas (notch/gesture bar wale phones) */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Font rendering crisp */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Buttons pe focus outline sirf keyboard se (mouse/touch pe nahi) */
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ===== App Layout Lock — no more jumping ===== */
+
+/* Viewport hard-lock — address bar hide/show pe layout na hile */
+html, body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100dvh;
+}
+
+/* App ka root scroll containers ke through hi scroll ho */
+body > * {
+  height: 100dvh;
+}
+
+/* Keyboard khulne pe sirf input area adjust ho, poori screen nahi */
+.chat-screen {
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Messages area — apna scroll, layout se azaad */
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* GPU layer — smooth scroll */
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+/* Chat open — halka fast fade (pehle heavy slide tha to bhaari lagta tha) */
+@keyframes chatOpenFast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.chat-open {
+  animation: chatOpenFast 0.15s ease both !important;
+}
+
+/* ===== Swipe to Reply Animation ===== */
+.swipe-wrap {
+  position: relative;
+  touch-action: pan-y;
+}
+.swipe-bubble {
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
+}
+.swipe-bubble.swiping {
+  transition: none; /* ungli ke saath instant follow */
+}
+.swipe-reply-icon {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%) scale(0);
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+.swipe-reply-icon.show {
+  transform: translateY(-50%) scale(1);
+}
+@keyframes replySnap {
+  0% { transform: translateY(-50%) scale(1); }
+  50% { transform: translateY(-50%) scale(1.35); }
+  100% { transform: translateY(-50%) scale(1); }
+}
+.swipe-reply-icon.snap {
+  animation: replySnap 0.3s var(--ease-spring);
+}

@@ -1,4 +1,6 @@
 "use client";
+import { askConfirm } from "@/components/ConfirmModal";
+import { ContactsSkeleton } from "@/components/Skeletons";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -89,9 +91,9 @@ export default function ContactsPage() {
     const found = await findByUsername(uname);
     setSearching(false);
     if (!found) {
-      setSearchMsg(`@${uname} nahi mila`);
+      setSearchMsg(`@${uname} not found`);
     } else if (found.uid === user?.uid) {
-      setSearchMsg("Yeh to aap khud ho 😄");
+      setSearchMsg("That's you! 😄");
     } else {
       setSearchResult(found);
     }
@@ -100,7 +102,7 @@ export default function ContactsPage() {
   const request = async (toUid: string) => {
     try {
       await sendRequest(user.uid, toUid);
-      setSearchMsg("Request bhej di ✓");
+      setSearchMsg("Request sent ✓");
       setSearchResult(null);
       setSearch("");
     } catch (e: any) {
@@ -139,7 +141,7 @@ export default function ContactsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--bg)]">
+    <main style={{ height: "100dvh", overflowY: "auto", overscrollBehavior: "contain" }} className="bg-[var(--bg)]">
       <header className="px-4 pt-4 pb-3 bg-[var(--card)] border-b border-[var(--border)] sticky top-0 z-10 head-down">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={() => router.push("/chats")} className="text-[var(--heading)] p-1">
@@ -220,7 +222,7 @@ export default function ContactsPage() {
             <p className="text-[var(--muted)] text-[11px] uppercase tracking-widest mb-2 px-1 font-medium">
               Incoming ({incoming.length})
             </p>
-            {incoming.length === 0 && <p className="text-[var(--muted)] text-sm px-1 mb-4">Koi incoming request nahi</p>}
+            {incoming.length === 0 && <p className="text-[var(--muted)] text-sm px-1 mb-4">No incoming requests</p>}
             {incoming.map((r) => (
               <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] mb-2">
                 <Avatar uid={r.from} />
@@ -246,7 +248,7 @@ export default function ContactsPage() {
             <p className="text-[var(--muted)] text-[11px] uppercase tracking-widest mt-6 mb-2 px-1 font-medium">
               Outgoing ({outgoing.length})
             </p>
-            {outgoing.length === 0 && <p className="text-[var(--muted)] text-sm px-1">Koi outgoing request nahi</p>}
+            {outgoing.length === 0 && <p className="text-[var(--muted)] text-sm px-1">No outgoing requests</p>}
             {outgoing.map((r) => (
               <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] mb-2">
                 <Avatar uid={r.to} />
@@ -322,7 +324,7 @@ export default function ContactsPage() {
                           </span>
                         </button>
                         <button
-                          onClick={() => { if (confirm("Remove contact?")) removeContact(user.uid, c.uid); setMenuFor(null); }}
+                          onClick={async () => { if (await askConfirm({ message: "Remove contact?", danger: true, confirmText: "Yes" })) removeContact(user.uid, c.uid); setMenuFor(null); }}
                           className="w-full text-left px-4 py-2.5 text-sm text-[#ba1a1a] hover:bg-[var(--surface)]"
                         >
                           <span className="flex items-center gap-2.5">
@@ -340,8 +342,8 @@ export default function ContactsPage() {
                 <>
                   {active.length === 0 && blocked.length === 0 && (
                     <div className="text-center py-10">
-                      <p className="text-[var(--muted)] text-sm">Abhi koi contact nahi</p>
-                      <p className="text-[var(--muted)] text-xs mt-1">Upar @username se search karke request bhejo</p>
+                      <p className="text-[var(--muted)] text-sm">No contacts yet</p>
+                      <p className="text-[var(--muted)] text-xs mt-1">Search by @username above and send a request</p>
                     </div>
                   )}
 

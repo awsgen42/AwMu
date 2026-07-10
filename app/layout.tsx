@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ConfirmModalHost from "@/components/ConfirmModal";
+import DeleteModalHost from "@/components/DeleteModal";
+import Shortcuts from "@/components/Shortcuts";
 
 export const metadata: Metadata = {
   title: "AwMu",
@@ -21,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -29,7 +32,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">{children}<ConfirmModalHost /><DeleteModalHost /><Shortcuts /></body>
     </html>
   );
 }

@@ -96,7 +96,7 @@ export default function NewGroupPage() {
 
         <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden mb-4">
           {users.length === 0 && (
-            <p className="text-[var(--muted)] text-sm text-center py-8">Pehle contacts add karo — group unhi se banta hai</p>
+            <p className="text-[var(--muted)] text-sm text-center py-8">Add contacts first — groups are made from your contacts</p>
           )}
           {users.map((x) => {
             const isSel = selected.includes(x.uid);

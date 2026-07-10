@@ -1,0 +1,19 @@
+{
+  "name": "AwMu",
+  "short_name": "AwMu",
+  "description": "AwMu — private messenger",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#f6fafd",
+  "theme_color": "#0088cc",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

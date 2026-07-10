@@ -31,8 +31,8 @@ export default function OfflineBar() {
       }`}
     >
       {offline
-        ? "📴 Offline — messages connection wapis aane pe khud send honge"
-        : "✓ Wapis online — sync ho raha hai"}
+        ? "📴 Offline — messages will send automatically when you're back online"
+        : "✓ Back online — syncing"}
     </div>
   );
 }
